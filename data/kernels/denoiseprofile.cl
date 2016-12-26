@@ -159,29 +159,27 @@ denoiseprofile_vert(global float* U4_in, global float* U4_out, const int width, 
   const int y = get_global_id(1);
   const int gidx = mad24(min(y, height-1), width, min(x, width-1));
 
+  buffer += P;
+
   if(x < width)
   {
     /* fill center part of buffer */
-    buffer[P + lid] = U4_in[gidx];
+    buffer[lid] = U4_in[gidx];
 
     /* left wing of buffer */
-    for(int n=0; n <= P/lsz; n++)
+    for(int l = lid + 1; l <= P; l += lsz)
     {
-      const int l = mad24(n, lsz, lid + 1);
-      if(l > P) continue;
       int yy = mad24((int)get_group_id(1), lsz, -l);
       yy = max(yy, 0);
-      buffer[P - l] = U4_in[mad24(yy, width, x)];
+      buffer[-l] = U4_in[mad24(yy, width, x)];
     }
 
     /* right wing of buffer */
-    for(int n=0; n <= P/lsz; n++)
+    for(int r = lsz - lid; r <= P; r += lsz)
     {
-      const int r = mad24(n, lsz, lsz - lid);
-      if(r > P) continue;
       int yy = mad24((int)get_group_id(1), lsz, lsz - 1 + r);
       yy = min(yy, height-1);
-      buffer[P + lsz - 1 + r] = U4_in[mad24(yy, width, x)];
+      buffer[lsz - 1 + r] = U4_in[mad24(yy, width, x)];
     }
   }
 
@@ -189,7 +187,7 @@ denoiseprofile_vert(global float* U4_in, global float* U4_out, const int width, 
 
   if(x >= width || y >= height) return;
 
-  buffer += lid + P;
+  buffer += lid;
 
   float distacc = 0.0f;
   for(int pj = -P; pj <= P; pj++)
@@ -228,13 +226,13 @@ denoiseprofile_accu(read_only image2d_t in, global float4* U2, global float* U4,
 }
 
 
-kernel void
+	kernel void
 denoiseprofile_finish(read_only image2d_t in, global float4* U2, write_only image2d_t out, const int width, const int height,
-                             const float4 a, const float4 sigma2)
+		const float4 a, const float4 sigma2)
 {
-  const int x = get_global_id(0);
-  const int y = get_global_id(1);
-  const int gidx = mad24(y, width, x);
+	const int x = get_global_id(0);
+	const int y = get_global_id(1);
+	const int gidx = mad24(y, width, x);
 
   if(x >= width || y >= height) return;
 
